@@ -7,15 +7,7 @@ func jogarTurno(turno int, ambulancias []Ambulancia) {
 		mov := "P"
 
 		if a.Livre {
-			melhor := -1
-
-			for i, c := range chamados {
-				if melhor == -1 ||
-					distancia(a.X, a.Y, c.X, c.Y) <
-						distancia(a.X, a.Y, chamados[melhor].X, chamados[melhor].Y) {
-					melhor = i
-				}
-			}
+			melhor := gridEspacial.BuscarMaisProximo(a.X, a.Y, chamados)
 
 			if melhor != -1 {
 				mov = direcao(
@@ -25,7 +17,7 @@ func jogarTurno(turno int, ambulancias []Ambulancia) {
 					chamados[melhor].Y,
 				)
 			}
-		} else {
+		} else { // Para os hospitais, que são poucos e fixos, a busca não precisa usar gridEspacial
 			melhor := 0
 
 			for i, h := range hospitais {

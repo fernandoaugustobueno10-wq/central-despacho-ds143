@@ -18,6 +18,7 @@ type Hospital struct {
 }
 
 var (
-	hospitais []Hospital
-	chamados  []Chamado
+	hospitais    []Hospital
+	chamados     []Chamado
+	gridEspacial *GridEspacial
 )

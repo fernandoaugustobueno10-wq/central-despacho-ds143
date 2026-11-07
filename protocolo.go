@@ -29,7 +29,11 @@ func inteiro(s string) int {
 }
 
 func lerInicio() {
-	lerCampos()
+	camposInicio := lerCampos()
+
+	largura := inteiro(camposInicio[1])
+	altura := inteiro(camposInicio[2])
+	gridEspacial = novoGridEspacial(largura, altura)
 
 	h := inteiro(lerCampos()[1])
 	for i := 0; i < h; i++ {
