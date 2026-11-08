@@ -3,10 +3,13 @@ package main
 const tamanhoCelula = 25
 
 type GridEspacial struct {
-	celulas   [][][]int
-	posicoes  []int
-	numCols   int
-	numLinhas int
+	celulas            [][][]int
+	posicoes           []int
+	numCols            int
+	numLinhas          int
+	largura            int
+	altura             int
+	distanciasHospital []uint16
 }
 
 func novoGridEspacial(largura, altura int) *GridEspacial {
@@ -23,6 +26,8 @@ func novoGridEspacial(largura, altura int) *GridEspacial {
 		celulas:   celulas,
 		numCols:   cols,
 		numLinhas: linhas,
+		largura:   largura,
+		altura:    altura,
 	}
 }
 
@@ -171,4 +176,44 @@ func (g *GridEspacial) BuscarMaisProximo(
 	}
 
 	return melhor
+}
+
+func (g *GridEspacial) PrepararHospitais(hospitais []Hospital) {
+	if len(hospitais) == 0 {
+		g.distanciasHospital = nil
+		return
+	}
+	largura, altura := g.largura, g.altura
+	valores := make([]uint16, largura*altura)
+	for i := range valores {
+		valores[i] = 65535
+	}
+	for _, h := range hospitais {
+		if h.X >= 0 && h.X < largura && h.Y >= 0 && h.Y < altura {
+			valores[h.Y*largura+h.X] = 0
+		}
+	}
+	for y := 0; y < altura; y++ {
+		for x := 0; x < largura; x++ {
+			i := y*largura + x
+			if x > 0 && valores[i-1] < valores[i] {
+				valores[i] = valores[i-1] + 1
+			}
+			if y > 0 && valores[i-largura] < valores[i] {
+				valores[i] = valores[i-largura] + 1
+			}
+		}
+	}
+	for y := altura - 1; y >= 0; y-- {
+		for x := largura - 1; x >= 0; x-- {
+			i := y*largura + x
+			if x+1 < largura && valores[i+1] < valores[i] {
+				valores[i] = valores[i+1] + 1
+			}
+			if y+1 < altura && valores[i+largura] < valores[i] {
+				valores[i] = valores[i+largura] + 1
+			}
+		}
+	}
+	g.distanciasHospital = valores
 }

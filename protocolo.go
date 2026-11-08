@@ -36,6 +36,7 @@ func lerInicio() {
 
 	largura := inteiro(camposInicio[1])
 	altura := inteiro(camposInicio[2])
+	totalTurnos = inteiro(camposInicio[3])
 
 	gridEspacial = novoGridEspacial(largura, altura)
 	inicializarChamados()
@@ -64,6 +65,7 @@ func lerInicio() {
 	}
 
 	lerCampos()
+	gridEspacial.PrepararHospitais(hospitais)
 }
 
 func configurarEntradaSaida() {
