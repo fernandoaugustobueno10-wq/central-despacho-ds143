@@ -61,6 +61,28 @@ func selecionarChamado(a Ambulancia, turno int, reservados []int, alvoAtual int)
 		return -1
 	}
 
+	var tabelaReservas [256]int
+
+	for _, id := range reservados {
+		chave := id + 1
+		pos := int((uint32(id) * 2654435761) >> 24)
+		for tabelaReservas[pos] != 0 {
+			pos = (pos + 1) & 255
+		}
+		tabelaReservas[pos] = chave
+	}
+
+	reservadoRapido := func(id int) bool {
+		pos := int((uint32(id) * 2654435761) >> 24)
+		for tabelaReservas[pos] != 0 {
+			if tabelaReservas[pos] == id+1 {
+				return true
+			}
+			pos = (pos + 1) & 255
+		}
+		return false
+	}
+
 	melhor := -1
 	melhorPontos := int64(-1)
 	menorDistancia := int(^uint(0) >> 1)
@@ -70,14 +92,16 @@ func selecionarChamado(a Ambulancia, turno int, reservados []int, alvoAtual int)
 			return
 		}
 		c := chamados[indice]
-		if alvoReservado(c.ID, reservados) {
+		if reservadoRapido(c.ID) {
 			return
 		}
 		pontos := pontuacaoChamado(a, c, turno, alvoAtual)
 		if pontos < 0 {
 			return
 		}
+
 		d := distancia(a.X, a.Y, c.X, c.Y)
+
 		if pontos > melhorPontos ||
 			(pontos == melhorPontos && d < menorDistancia) ||
 			(pontos == melhorPontos && d == menorDistancia &&
@@ -85,6 +109,16 @@ func selecionarChamado(a Ambulancia, turno int, reservados []int, alvoAtual int)
 			melhor = indice
 			melhorPontos = pontos
 			menorDistancia = d
+		}
+	}
+
+	examinarBloco := func(x, y int) {
+		indices := gridEspacial.celulas[x][y]
+		if len(indices) > 180 {
+			indices = candidatosDoBloco(x, y, turno)
+		}
+		for _, indice := range indices {
+			considerar(indice)
 		}
 	}
 
@@ -97,6 +131,18 @@ func selecionarChamado(a Ambulancia, turno int, reservados []int, alvoAtual int)
 	bx, by := a.X/tamanhoCelula, a.Y/tamanhoCelula
 	maxRaio := gridEspacial.numCols + gridEspacial.numLinhas
 
+	if totalTurnos > 0 {
+		restantes := totalTurnos - turno
+		if restantes < 0 {
+			return -1
+		}
+
+		limiteRaio := restantes/tamanhoCelula + 2
+		if limiteRaio < maxRaio {
+			maxRaio = limiteRaio
+		}
+	}
+
 	for raio := 0; raio <= maxRaio; raio++ {
 		xMin, xMax := bx-raio, bx+raio
 		yMin, yMax := by-raio, by+raio
@@ -105,14 +151,13 @@ func selecionarChamado(a Ambulancia, turno int, reservados []int, alvoAtual int)
 			if x < 0 || x >= gridEspacial.numCols {
 				continue
 			}
+
 			for j, y := range []int{yMin, yMax} {
 				if y < 0 || y >= gridEspacial.numLinhas ||
 					(j == 1 && yMin == yMax) {
 					continue
 				}
-				for _, indice := range gridEspacial.celulas[x][y] {
-					considerar(indice)
-				}
+				examinarBloco(x, y)
 			}
 		}
 
@@ -120,20 +165,20 @@ func selecionarChamado(a Ambulancia, turno int, reservados []int, alvoAtual int)
 			if y < 0 || y >= gridEspacial.numLinhas {
 				continue
 			}
+
 			for _, x := range []int{xMin, xMax} {
 				if x < 0 || x >= gridEspacial.numCols ||
 					(x == xMax && xMin == xMax) {
 					continue
 				}
-				for _, indice := range gridEspacial.celulas[x][y] {
-					considerar(indice)
-				}
+				examinarBloco(x, y)
 			}
 		}
 
-		if melhor != -1 && raio >= 3 {
+		if melhor != -1 && raio >= 1 {
 			break
 		}
 	}
+
 	return melhor
 }
