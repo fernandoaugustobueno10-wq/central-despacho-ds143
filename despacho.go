@@ -3,21 +3,48 @@ package main
 import "fmt"
 
 func jogarTurno(turno int, ambulancias []Ambulancia) {
+	reservados := make([]int, 0, len(ambulancias))
+
+	for _, a := range ambulancias {
+		if a.ID >= len(alvosPorAmbulancia) {
+			anteriores := alvosPorAmbulancia
+			alvosPorAmbulancia = make([]int, a.ID+1)
+			copy(alvosPorAmbulancia, anteriores)
+		}
+	}
+
+	for _, a := range ambulancias {
+		if !a.Livre {
+			alvosPorAmbulancia[a.ID] = 0
+			continue
+		}
+
+		alvoAtual := alvosPorAmbulancia[a.ID] - 1
+		melhor := selecionarChamado(a, turno, reservados, alvoAtual)
+
+		if melhor == -1 {
+			alvosPorAmbulancia[a.ID] = 0
+			continue
+		}
+
+		id := chamados[melhor].ID
+		alvosPorAmbulancia[a.ID] = id + 1
+		reservados = append(reservados, id)
+	}
+
 	for _, a := range ambulancias {
 		mov := "P"
 
 		if a.Livre {
-			melhor := gridEspacial.BuscarMaisProximo(a.X, a.Y, chamados)
+			id := alvosPorAmbulancia[a.ID] - 1
 
-			if melhor != -1 {
-				mov = direcao(
-					a.X,
-					a.Y,
-					chamados[melhor].X,
-					chamados[melhor].Y,
-				)
+			if id >= 0 {
+				if indice, existe := tabelaChamados.Buscar(id); existe {
+					c := chamados[indice]
+					mov = direcao(a.X, a.Y, c.X, c.Y)
+				}
 			}
-		} else { // Para os hospitais, que são poucos e fixos, a busca não precisa usar gridEspacial
+		} else if len(hospitais) > 0 {
 			melhor := 0
 
 			for i, h := range hospitais {
