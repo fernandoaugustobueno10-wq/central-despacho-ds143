@@ -15,7 +15,8 @@ func prepararTeste(entrada string) *bytes.Buffer {
 	escritor = bufio.NewWriter(&saida)
 
 	hospitais = nil
-	chamados = nil
+	gridEspacial = novoGridEspacial(200, 200)
+	inicializarChamados()
 
 	return &saida
 }
@@ -106,10 +107,13 @@ FIM
 
 	prepararTeste(entrada)
 
-	chamados = []Chamado{
-		{ID: 100, X: 10, Y: 10, Valor: 15, Prazo: 50},
-		{ID: 200, X: 20, Y: 20, Valor: 30, Prazo: 60},
-	}
+	adicionarChamado(Chamado{
+		ID: 100, X: 10, Y: 10, Valor: 15, Prazo: 50,
+	})
+
+	adicionarChamado(Chamado{
+		ID: 200, X: 20, Y: 20, Valor: 30, Prazo: 60,
+	})
 
 	_, _, ok := lerTurno()
 
@@ -139,10 +143,13 @@ FIM
 
 	prepararTeste(entrada)
 
-	chamados = []Chamado{
-		{ID: 100, X: 10, Y: 10, Valor: 15, Prazo: 9},
-		{ID: 200, X: 20, Y: 20, Valor: 30, Prazo: 10},
-	}
+	adicionarChamado(Chamado{
+		ID: 100, X: 10, Y: 10, Valor: 15, Prazo: 9,
+	})
+
+	adicionarChamado(Chamado{
+		ID: 200, X: 20, Y: 20, Valor: 30, Prazo: 10,
+	})
 
 	_, _, ok := lerTurno()
 
@@ -176,9 +183,9 @@ func TestRespostaTurno(t *testing.T) {
 		{X: 0, Y: 0},
 	}
 
-	chamados = []Chamado{
-		{ID: 100, X: 5, Y: 0, Valor: 15, Prazo: 50},
-	}
+	adicionarChamado(Chamado{
+		ID: 100, X: 5, Y: 0, Valor: 15, Prazo: 50,
+	})
 
 	ambulancias := []Ambulancia{
 		{ID: 0, X: 0, Y: 0, Livre: true},

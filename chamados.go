@@ -1,38 +1,82 @@
 package main
 
-var tabelaChamados *TabelaHash
+var (
+	tabelaChamados *TabelaHash
+	filaExpiracao  *FilaExpiracao
+)
 
-func removerPorID(id int) {
-	indice, achou := tabelaChamados.Buscar(id)
-	if !achou {
+func inicializarChamados() {
+	chamados = nil
+	tabelaChamados = novaTabelaHash()
+	filaExpiracao = novaFilaExpiracao()
+}
+
+func adicionarChamado(c Chamado) {
+	if tabelaChamados == nil {
+		inicializarChamados()
+	}
+	if _, existe := tabelaChamados.Buscar(c.ID); existe {
 		return
 	}
 
-	// Remove de chamados (troca de posição com o último)
-	ultimo := len(chamados) - 1
-	if indice != ultimo {
-		chamados[indice] = chamados[ultimo]                 // Move o último elemento para a posição do removido
-		tabelaChamados.Inserir(chamados[indice].ID, indice) // atualize na hash
+	indice := len(chamados)
+	chamados = append(chamados, c)
+	tabelaChamados.Inserir(c.ID, indice)
+	filaExpiracao.Inserir(c.ID, c.Prazo)
+
+	if gridEspacial != nil {
+		gridEspacial.Inserir(c.X, c.Y, indice)
+	}
+}
+
+func removerPorID(id int) {
+	if tabelaChamados == nil {
+		return
 	}
 
-	// Encolhe o slice
-	chamados = chamados[:ultimo]
+	indice, existe := tabelaChamados.Buscar(id)
+	if !existe {
+		return
+	}
 
+	ultimo := len(chamados) - 1
+
+	if gridEspacial != nil {
+		gridEspacial.Remover(indice, chamados)
+	}
+
+	if indice != ultimo {
+		movido := chamados[ultimo]
+		chamados[indice] = movido
+		tabelaChamados.Inserir(movido.ID, indice)
+
+		if gridEspacial != nil {
+			gridEspacial.AtualizarIndice(ultimo, indice, movido)
+		}
+	}
+
+	chamados = chamados[:ultimo]
 	tabelaChamados.Remover(id)
 }
 
 func removerExpirados(turno int) {
-	// filtra os ativos e reconstrui/atualiza a hash.
-	ativos := make([]Chamado, 0, len(chamados))
-	tabelaChamados = novaTabelaHash()
-
-	for _, c := range chamados {
-		if c.Prazo >= turno {
-			novoIndice := len(ativos)
-			ativos = append(ativos, c)
-			tabelaChamados.Inserir(c.ID, novoIndice) // Insere o ID e o novo índice na tabela hash
-		}
+	if filaExpiracao == nil || tabelaChamados == nil {
+		return
 	}
 
-	chamados = ativos
+	for {
+		proximo, existe := filaExpiracao.Proximo()
+
+		if !existe || proximo.prazo >= turno {
+			return
+		}
+
+		filaExpiracao.Retirar()
+
+		indice, encontrado := tabelaChamados.Buscar(proximo.id)
+
+		if encontrado && chamados[indice].Prazo == proximo.prazo {
+			removerPorID(proximo.id)
+		}
+	}
 }

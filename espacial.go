@@ -3,75 +3,172 @@ package main
 const tamanhoCelula = 25
 
 type GridEspacial struct {
-	celulas   [][][]int // Matriz 2D onde cada posição guarda uma lista de índices de chamados
+	celulas   [][][]int
+	posicoes  []int
 	numCols   int
 	numLinhas int
 }
 
 func novoGridEspacial(largura, altura int) *GridEspacial {
-	numCols := (largura / tamanhoCelula) + 1
-	numLinhas := (altura / tamanhoCelula) + 1
+	cols := (largura + tamanhoCelula - 1) / tamanhoCelula
+	linhas := (altura + tamanhoCelula - 1) / tamanhoCelula
 
-	celulas := make([][][]int, numCols) // Inicializa a matriz 2D de slices
-	for i := range celulas {
-		celulas[i] = make([][]int, numLinhas)
+	celulas := make([][][]int, cols)
+
+	for x := range celulas {
+		celulas[x] = make([][]int, linhas)
 	}
 
 	return &GridEspacial{
 		celulas:   celulas,
-		numCols:   numCols,
-		numLinhas: numLinhas,
+		numCols:   cols,
+		numLinhas: linhas,
 	}
 }
 
 func (g *GridEspacial) Inserir(x, y, indice int) {
-	bx := x / tamanhoCelula //coordenada convertida x do bloco em que a posição x se enquadra
-	by := y / tamanhoCelula //coordenada convertida y do bloco em que a posição y se enquadra
+	bx, by := x/tamanhoCelula, y/tamanhoCelula
 
-	// Proteção contra coordenadas fora dos limites
-	if bx >= 0 && bx < g.numCols && by >= 0 && by < g.numLinhas {
-		g.celulas[bx][by] = append(g.celulas[bx][by], indice) // Adiciona o id do chamado no slice do bloco em que se enquadrou
+	if bx < 0 || bx >= g.numCols || by < 0 || by >= g.numLinhas {
+		return
 	}
+
+	for len(g.posicoes) <= indice {
+		g.posicoes = append(g.posicoes, 0)
+	}
+
+	g.posicoes[indice] = len(g.celulas[bx][by])
+	g.celulas[bx][by] = append(g.celulas[bx][by], indice)
 }
 
-func (g *GridEspacial) BuscarMaisProximo(ax, ay int, chamados []Chamado) int {
-	melhorIndice := -1
-	menorDist := -1
+func (g *GridEspacial) Remover(indice int, todos []Chamado) {
+	c := todos[indice]
 
-	bx := ax / tamanhoCelula //coordenada convertida x do bloco em que a posição x da ambulância se enquadra
-	by := ay / tamanhoCelula //coordenada convertida y do bloco em que a posição y da ambulância se enquadra
+	bx, by := c.X/tamanhoCelula, c.Y/tamanhoCelula
 
-	// Percorre o bloco atual e os 8 vizinhos
-	for dx := -1; dx <= 1; dx++ {
-		for dy := -1; dy <= 1; dy++ {
-			nx, ny := bx+dx, by+dy
+	indices := g.celulas[bx][by]
+	pos := g.posicoes[indice]
+	ultimo := indices[len(indices)-1]
 
-			if nx >= 0 && nx < g.numCols && ny >= 0 && ny < g.numLinhas {
-				indices := g.celulas[nx][ny] // Pega o slice de indices de chamados naquele bloco
+	indices[pos] = ultimo
+	g.posicoes[ultimo] = pos
 
-				for _, idx := range indices { // Itera cada indice de chamado e compara a distância da ambulância para ele com a menor distância achada até agora
-					chamado := chamados[idx]
-					distancia := distancia(ax, ay, chamado.X, chamado.Y)
+	g.celulas[bx][by] = indices[:len(indices)-1]
+}
 
-					if melhorIndice == -1 || distancia < menorDist {
-						menorDist = distancia
-						melhorIndice = idx
+func (g *GridEspacial) AtualizarIndice(antigo, novo int, c Chamado) {
+	bx, by := c.X/tamanhoCelula, c.Y/tamanhoCelula
+	pos := g.posicoes[antigo]
+
+	g.celulas[bx][by][pos] = novo
+	g.posicoes[novo] = pos
+}
+
+func (g *GridEspacial) BuscarMaisProximo(
+	ax, ay int,
+	todos []Chamado,
+) int {
+	if len(todos) == 0 {
+		return -1
+	}
+
+	bx, by := ax/tamanhoCelula, ay/tamanhoCelula
+
+	melhor := -1
+	menorDist := int(^uint(0) >> 1)
+
+	maxRaio := g.numCols + g.numLinhas
+
+	for raio := 0; raio <= maxRaio; raio++ {
+		xMin, xMax := bx-raio, bx+raio
+		yMin, yMax := by-raio, by+raio
+
+		for x := xMin; x <= xMax; x++ {
+			if x < 0 || x >= g.numCols {
+				continue
+			}
+
+			for j, y := range []int{yMin, yMax} {
+				if y < 0 || y >= g.numLinhas ||
+					(j == 1 && yMin == yMax) {
+					continue
+				}
+
+				for _, idx := range g.celulas[x][y] {
+					c := todos[idx]
+					d := distancia(ax, ay, c.X, c.Y)
+
+					if d < menorDist {
+						menorDist = d
+						melhor = idx
 					}
 				}
 			}
 		}
-	}
 
-	// se não achou nada, busca no slice global com varredura linear
-	if melhorIndice == -1 {
-		for i, chamado := range chamados {
-			distancia := distancia(ax, ay, chamado.X, chamado.Y)
-			if melhorIndice == -1 || distancia < menorDist {
-				menorDist = distancia
-				melhorIndice = i
+		for y := yMin + 1; y < yMax; y++ {
+			if y < 0 || y >= g.numLinhas {
+				continue
+			}
+
+			for _, x := range []int{xMin, xMax} {
+				if x < 0 || x >= g.numCols ||
+					(x == xMax && xMin == xMax) {
+					continue
+				}
+
+				for _, idx := range g.celulas[x][y] {
+					c := todos[idx]
+					d := distancia(ax, ay, c.X, c.Y)
+
+					if d < menorDist {
+						menorDist = d
+						melhor = idx
+					}
+				}
+			}
+		}
+
+		if melhor != -1 {
+			limite := int(^uint(0) >> 1)
+
+			if xMin > 0 {
+				d := ax - xMin*tamanhoCelula + 1
+
+				if d < limite {
+					limite = d
+				}
+			}
+
+			if xMax < g.numCols-1 {
+				d := (xMax+1)*tamanhoCelula - ax
+
+				if d < limite {
+					limite = d
+				}
+			}
+
+			if yMin > 0 {
+				d := ay - yMin*tamanhoCelula + 1
+
+				if d < limite {
+					limite = d
+				}
+			}
+
+			if yMax < g.numLinhas-1 {
+				d := (yMax+1)*tamanhoCelula - ay
+
+				if d < limite {
+					limite = d
+				}
+			}
+
+			if menorDist <= limite {
+				return melhor
 			}
 		}
 	}
 
-	return melhorIndice
+	return melhor
 }
