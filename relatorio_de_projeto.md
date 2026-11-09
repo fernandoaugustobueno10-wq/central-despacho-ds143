@@ -1,7 +1,7 @@
 # Relatório de Projeto – Central de Despacho
 
 **Disciplina:** DS143 – Estruturas de Dados II  
-**Integrantes:** Fernando Augusto Bueno Canquerini e 
+**Integrantes:** Fernando Augusto Bueno Canquerini e Fabricio Renan Plautz 
 **Etapa 1 – Grade aberta**
 
 ## 1. Busca de chamados próximos
