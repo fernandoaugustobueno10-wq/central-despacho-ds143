@@ -7,7 +7,7 @@ Trabalho desenvolvido para a disciplina DS143 – Estruturas de Dados II, do cur
 ## Integrantes
 
 - Fernando Augusto Bueno Canquerini – GRR20254201
-- 
+- Fabricio Renan Plautz - GRR20253136
 
 ## Sobre o projeto
 
